@@ -152,7 +152,7 @@ namespace Baikal
 
     AppSettings::AppSettings()
         : path("../Resources/CornellBox")
-        , modelname("orig.objm")
+        , modelname("classroom.obj")
         , envmapname("../Resources/Textures/studio015.hdr")
         //render
         , width(512)
