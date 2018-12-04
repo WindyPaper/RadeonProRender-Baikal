@@ -39,6 +39,7 @@ THE SOFTWARE.
 
 //#include "tiny_obj_loader.h"
 #include "Utils/log.h"
+#include "ofbx.h"
 
 namespace Baikal
 {
@@ -84,6 +85,20 @@ namespace Baikal
 		// Try loading file
 		LogInfo("Loading a scene from fbx: ", filename, " ... ");
 		std::string err;
+
+		FILE* fp = fopen(filename.c_str(), "rb");
+		if (!fp) return false;
+
+		fseek(fp, 0, SEEK_END);
+		long file_size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+		auto* content = new ofbx::u8[file_size];
+		fread(content, 1, file_size, fp);
+		ofbx::IScene *fbx_scene_ptr = ofbx::load((ofbx::u8*)content, file_size);
+		
+		int mesh_num = fbx_scene_ptr->getMeshCount();
+		
+
 		//auto res = LoadObj(&attrib, &objshapes, &objmaterials, &err, filename.c_str(), basepath.c_str(), true);
 		//if (!res)
 		//{
@@ -94,10 +109,13 @@ namespace Baikal
 		//// Allocate scene
 		//auto scene = Scene1::Create();
 
-		//// Enumerate and translate materials
-		//// Keep track of emissive subset
-		//std::set<Material::Ptr> emissives;
-		//std::vector<Material::Ptr> materials(objmaterials.size());
+		// Enumerate and translate materials
+		// Keep track of emissive subset
+		std::set<Material::Ptr> emissives;
+		std::vector<Material::Ptr> materials;
+		materials.reserve(fbx_scene_ptr->getMeshCount());
+
+
 		//for (int i = 0; i < (int)objmaterials.size(); ++i)
 		//{
 		//	// Translate material
