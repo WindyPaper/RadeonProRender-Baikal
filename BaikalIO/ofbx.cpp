@@ -1042,9 +1042,13 @@ struct MaterialImpl : Material
 
 	const Texture* getTexture(Texture::TextureType type) const override { return textures[type]; }
 	Color getDiffuseColor() const override { return diffuse_color; }
+	virtual Color getEmission() const override {
+		return emission_color;
+	};
 
 	const Texture* textures[Texture::TextureType::COUNT];
 	Color diffuse_color;
+	Color emission_color;
 };
 
 

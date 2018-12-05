@@ -59,7 +59,7 @@ namespace Baikal
 		}
 
 	private:
-		//Material::Ptr TranslateMaterialUberV2(ImageIo const& image_io, tinyobj::material_t const& mat, std::string const& basepath, Scene1& scene) const;
+		Material::Ptr TranslateMaterialUberV2(ImageIo const& image_io, ofbx::Material const& mat, std::string const& basepath, Scene1& scene) const;
 
 		mutable std::map<std::string, Material::Ptr> m_material_cache;
 	};
@@ -252,128 +252,138 @@ namespace Baikal
 
 		return scene;
 	}
-	//Material::Ptr FBX_Loader::TranslateMaterialUberV2(ImageIo const& image_io, tinyobj::material_t const& mat, std::string const& basepath, Scene1& scene) const
-	//{
-	//	auto iter = m_material_cache.find(mat.name);
+	Material::Ptr  FBX_Loader::TranslateMaterialUberV2(ImageIo const& image_io, ofbx::Material const& mat, std::string const& basepath, Scene1& scene) const
+	{
+		auto iter = m_material_cache.find(mat.name);
 
-	//	if (iter != m_material_cache.cend())
-	//	{
-	//		return iter->second;
-	//	}
+		if (iter != m_material_cache.cend())
+		{
+			return iter->second;
+		}
 
-	//	UberV2Material::Ptr material = UberV2Material::Create();
+		UberV2Material::Ptr material = UberV2Material::Create();
 
-	//	//RadeonRays::float3 emission(mat.emission[0], mat.emission[1], mat.emission[2]);
+		ofbx::Color emission_color = mat.getEmission();
+		RadeonRays::float3 emission(emission_color.r, emission_color.g, emission_color.b);
 
-	//	//bool apply_gamma = true;
+		bool apply_gamma = true;
 
-	//	//uint32_t material_layers = 0;
-	//	//auto uberv2_set_texture = [](UberV2Material::Ptr material, const std::string input_name, Texture::Ptr texture, bool apply_gamma)
-	//	//{
-	//	//	if (apply_gamma)
-	//	//	{
-	//	//		material->SetInputValue(input_name.c_str(),
-	//	//			InputMap_Pow::Create(
-	//	//				InputMap_Sampler::Create(texture),
-	//	//				InputMap_ConstantFloat::Create(2.2f)));
-	//	//	}
-	//	//	else
-	//	//	{
-	//	//		material->SetInputValue(input_name.c_str(), InputMap_Sampler::Create(texture));
-	//	//	}
-	//	//};
-	//	//auto uberv2_set_bump_texture = [](UberV2Material::Ptr material, Texture::Ptr texture)
-	//	//{
-	//	//	auto bump_sampler = InputMap_SamplerBumpMap::Create(texture);
-	//	//	auto bump_remap = Baikal::InputMap_Remap::Create(
-	//	//		Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(0.f, 1.f, 0.f)),
-	//	//		Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(-1.f, 1.f, 0.f)),
-	//	//		bump_sampler);
-	//	//	material->SetInputValue("uberv2.shading_normal", bump_remap);
+		uint32_t material_layers = 0;
+		auto uberv2_set_texture = [](UberV2Material::Ptr material, const std::string input_name, Texture::Ptr texture, bool apply_gamma)
+		{
+			if (apply_gamma)
+			{
+				material->SetInputValue(input_name.c_str(),
+					InputMap_Pow::Create(
+						InputMap_Sampler::Create(texture),
+						InputMap_ConstantFloat::Create(2.2f)));
+			}
+			else
+			{
+				material->SetInputValue(input_name.c_str(), InputMap_Sampler::Create(texture));
+			}
+		};
+		auto uberv2_set_bump_texture = [](UberV2Material::Ptr material, Texture::Ptr texture)
+		{
+			auto bump_sampler = InputMap_SamplerBumpMap::Create(texture);
+			auto bump_remap = Baikal::InputMap_Remap::Create(
+				Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(0.f, 1.f, 0.f)),
+				Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(-1.f, 1.f, 0.f)),
+				bump_sampler);
+			material->SetInputValue("uberv2.shading_normal", bump_remap);
 
-	//	//};
+		};
 
-	//	//// Check emission layer
-	//	//if (emission.sqnorm() > 0)
-	//	//{
-	//	//	material_layers |= UberV2Material::Layers::kEmissionLayer;
-	//	//	if (!mat.diffuse_texname.empty())
-	//	//	{
-	//	//		auto texture = LoadTexture(image_io, scene, basepath, mat.diffuse_texname);
-	//	//		uberv2_set_texture(material, "uberv2.emission.color", texture, apply_gamma);
-	//	//	}
-	//	//	else
-	//	//	{
-	//	//		material->SetInputValue("uberv2.emission.color", InputMap_ConstantFloat3::Create(emission));
-	//	//	}
-	//	//}
+		const ofbx::Texture *diffuse_tex_ptr = mat.getTexture(ofbx::Texture::TextureType::DIFFUSE);
+		char diff_tex_path[128];
 
-	//	//auto s = RadeonRays::float3(mat.specular[0], mat.specular[1], mat.specular[2]);
-	//	//auto r = RadeonRays::float3(mat.transmittance[0], mat.transmittance[1], mat.transmittance[2]);
-	//	//auto d = RadeonRays::float3(mat.diffuse[0], mat.diffuse[1], mat.diffuse[2]);
+		//// Check emission layer
+		if (emission.sqnorm() > 0)
+		{
+			material_layers |= UberV2Material::Layers::kEmissionLayer;			
+			if (!diffuse_tex_ptr)
+			{				
+				diffuse_tex_ptr->getFileName().toString(diff_tex_path);
+				auto texture = LoadTexture(image_io, scene, basepath, diff_tex_path);
+				uberv2_set_texture(material, "uberv2.emission.color", texture, apply_gamma);
+			}
+			else
+			{
+				material->SetInputValue("uberv2.emission.color", InputMap_ConstantFloat3::Create(emission));
+			}
+		}
 
-	//	//auto default_ior = Baikal::InputMap_ConstantFloat::Create(3.0f);
-	//	//auto default_roughness = Baikal::InputMap_ConstantFloat::Create(0.01f);
-	//	//auto default_one = Baikal::InputMap_ConstantFloat::Create(1.0f);
+		ofbx::Color diffuse_color = mat.getDiffuseColor();
 
-	//	//// Check refraction layer
-	//	//if (r.sqnorm() > 0)
-	//	//{
-	//	//	material_layers |= UberV2Material::Layers::kRefractionLayer;
-	//	//	material->SetInputValue("uberv2.refraction.ior", default_ior);
-	//	//	material->SetInputValue("uberv2.refraction.roughness", default_roughness);
-	//	//	material->SetInputValue("uberv2.refraction.color", InputMap_ConstantFloat3::Create(r));
-	//	//}
+		//auto s = RadeonRays::float3(mat.specular[0], mat.specular[1], mat.specular[2]);
+		//auto r = RadeonRays::float3(mat.transmittance[0], mat.transmittance[1], mat.transmittance[2]);
+		auto d = RadeonRays::float3(diffuse_color.r, diffuse_color.g, diffuse_color.b);
 
-	//	//// Check reflection layer
-	//	//if (s.sqnorm() > 0)
-	//	//{
-	//	//	material_layers |= UberV2Material::Layers::kReflectionLayer;
-	//	//	material->SetInputValue("uberv2.reflection.ior", default_ior);
-	//	//	material->SetInputValue("uberv2.reflection.roughness", default_roughness);
-	//	//	material->SetInputValue("uberv2.reflection.metalness", default_one);
+		//auto default_ior = Baikal::InputMap_ConstantFloat::Create(3.0f);
+		//auto default_roughness = Baikal::InputMap_ConstantFloat::Create(0.01f);
+		//auto default_one = Baikal::InputMap_ConstantFloat::Create(1.0f);
 
-	//	//	if (!mat.specular_texname.empty())
-	//	//	{
-	//	//		auto texture = LoadTexture(image_io, scene, basepath, mat.specular_texname);
-	//	//		uberv2_set_texture(material, "uberv2.reflection.color", texture, apply_gamma);
-	//	//	}
-	//	//	else
-	//	//	{
-	//	//		material->SetInputValue("uberv2.reflection.color", InputMap_ConstantFloat3::Create(s));
-	//	//	}
-	//	//}
+		//// Check refraction layer
+		//if (r.sqnorm() > 0)
+		//{
+		//	material_layers |= UberV2Material::Layers::kRefractionLayer;
+		//	material->SetInputValue("uberv2.refraction.ior", default_ior);
+		//	material->SetInputValue("uberv2.refraction.roughness", default_roughness);
+		//	material->SetInputValue("uberv2.refraction.color", InputMap_ConstantFloat3::Create(r));
+		//}
 
-	//	//// Check if we have bump map
-	//	//if (!mat.bump_texname.empty())
-	//	//{
-	//	//	material_layers |= UberV2Material::Layers::kShadingNormalLayer;
+		//// Check reflection layer
+		//if (s.sqnorm() > 0)
+		//{
+		//	material_layers |= UberV2Material::Layers::kReflectionLayer;
+		//	material->SetInputValue("uberv2.reflection.ior", default_ior);
+		//	material->SetInputValue("uberv2.reflection.roughness", default_roughness);
+		//	material->SetInputValue("uberv2.reflection.metalness", default_one);
 
-	//	//	auto texture = LoadTexture(image_io, scene, basepath, mat.bump_texname);
-	//	//	uberv2_set_bump_texture(material, texture);
-	//	//}
+		//	if (!mat.specular_texname.empty())
+		//	{
+		//		auto texture = LoadTexture(image_io, scene, basepath, mat.specular_texname);
+		//		uberv2_set_texture(material, "uberv2.reflection.color", texture, apply_gamma);
+		//	}
+		//	else
+		//	{
+		//		material->SetInputValue("uberv2.reflection.color", InputMap_ConstantFloat3::Create(s));
+		//	}
+		//}
 
-	//	//// Finally add diffuse layer
-	//	//{
-	//	//	material_layers |= UberV2Material::Layers::kDiffuseLayer;
+		// Check if we have bump map
+		const ofbx::Texture *normal_tex_ptr = mat.getTexture(ofbx::Texture::TextureType::NORMAL);
+		if (!normal_tex_ptr)
+		{
+			material_layers |= UberV2Material::Layers::kShadingNormalLayer;
 
-	//	//	if (!mat.diffuse_texname.empty())
-	//	//	{
-	//	//		auto texture = LoadTexture(image_io, scene, basepath, mat.diffuse_texname);
-	//	//		uberv2_set_texture(material, "uberv2.diffuse.color", texture, apply_gamma);
-	//	//	}
-	//	//	else
-	//	//	{
-	//	//		material->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(d));
-	//	//	}
-	//	//}
+			char nor_tex_file_name[128];
+			normal_tex_ptr->getFileName().toString(nor_tex_file_name);
+			auto texture = LoadTexture(image_io, scene, basepath, nor_tex_file_name);
+			uberv2_set_bump_texture(material, texture);
+		}
 
-	//	//// Set material name
-	//	//material->SetName(mat.name);
-	//	//material->SetLayers(material_layers);
+		// Finally add diffuse layer
+		{
+			material_layers |= UberV2Material::Layers::kDiffuseLayer;
 
-	//	//m_material_cache.emplace(std::make_pair(mat.name, material));
+			if (!diffuse_tex_ptr)
+			{
+				auto texture = LoadTexture(image_io, scene, basepath, diff_tex_path);
+				uberv2_set_texture(material, "uberv2.diffuse.color", texture, apply_gamma);
+			}
+			else
+			{
+				material->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(d));
+			}
+		}
 
-	//	return material;
-	//}
+		// Set material name
+		material->SetName(mat.name);
+		material->SetLayers(material_layers);
+
+		m_material_cache.emplace(std::make_pair(mat.name, material));
+
+		return material;
+	}
 }
