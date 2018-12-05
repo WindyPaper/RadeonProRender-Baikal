@@ -111,9 +111,33 @@ namespace Baikal
 
 		// Enumerate and translate materials
 		// Keep track of emissive subset
-		std::set<Material::Ptr> emissives;
-		std::vector<Material::Ptr> materials;
-		materials.reserve(fbx_scene_ptr->getMeshCount());
+
+		for (int mesh_i = 0; mesh_i < mesh_num; ++mesh_i)
+		{
+			const ofbx::Mesh *mesh_ptr = fbx_scene_ptr->getMesh(mesh_i);
+			int mat_num = mesh_ptr->getMaterialCount();
+
+			std::set<Material::Ptr> emissives;
+			std::vector<Material::Ptr> materials(mesh_num);
+
+			for (int mat_i = 0; mat_i < mat_num; ++mat_i)
+			{
+				materials[mat_i] = TranslateMaterialUberV2(*image_io, *mesh_ptr->getMaterial(mat_i), basepath, *scene);
+
+				// Add to emissive subset if needed
+				if (materials[mat_i]->HasEmission())
+				{
+					emissives.insert(materials[i]);
+				}
+
+			}
+						
+			const ofbx::Geometry *geo_ptr = mesh_ptr->getGeometry();
+
+
+		}
+
+		
 
 
 		//for (int i = 0; i < (int)objmaterials.size(); ++i)
@@ -243,12 +267,12 @@ namespace Baikal
 		//	}
 		//}
 
-		//// TODO: temporary code to add directional light
-		//auto light = DirectionalLight::Create();
-		//light->SetDirection(RadeonRays::float3(.1f, -1.f, -.1f));
-		//light->SetEmittedRadiance(RadeonRays::float3(1.f, 1.f, 1.f));
+		// TODO: temporary code to add directional light
+		auto light = DirectionalLight::Create();
+		light->SetDirection(RadeonRays::float3(.1f, -1.f, -.1f));
+		light->SetEmittedRadiance(RadeonRays::float3(1.f, 1.f, 1.f));
 
-		//scene->AttachLight(light);
+		scene->AttachLight(light);
 
 		return scene;
 	}
