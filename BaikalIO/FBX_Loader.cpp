@@ -123,18 +123,41 @@ namespace Baikal
 			for (int mat_i = 0; mat_i < mat_num; ++mat_i)
 			{
 				materials[mat_i] = TranslateMaterialUberV2(*image_io, *mesh_ptr->getMaterial(mat_i), basepath, *scene);
+				
 
 				// Add to emissive subset if needed
 				if (materials[mat_i]->HasEmission())
 				{
-					emissives.insert(materials[i]);
+					emissives.insert(materials[mat_i]);
 				}
 
 			}
 						
 			const ofbx::Geometry *geo_ptr = mesh_ptr->getGeometry();
 
+			int vertice_num = geo_ptr->getVertexCount();
+			std::vector<RadeonRays::float3> vertices_vec(vertice_num);
+			std::vector<RadeonRays::float3> normals_vec(vertice_num);
+			std::vector<RadeonRays::float2> uv_vec(vertice_num);
+			std::vector<unsigned int> indices;
 
+			for (int i = 0; i < vertice_num; ++i)
+			{
+				vertices_vec[i] = RadeonRays::float3((float)geo_ptr->getVertices()[i].x, (float)geo_ptr->getVertices()[i].y, (float)geo_ptr->getVertices()[i].z);
+				normals_vec[i] = RadeonRays::float3((float)geo_ptr->getNormals()[i].x, (float)geo_ptr->getNormals()[i].y, (float)geo_ptr->getNormals()[i].z);
+				uv_vec[i] = RadeonRays::float2((float)geo_ptr->getUVs()[i].x, (float)geo_ptr->getUVs()[i].y);
+				indices.push_back(static_cast<unsigned int>(i));
+			}
+
+			auto mesh = Mesh::Create();
+			mesh->SetVertices(&vertices_vec[0], vertice_num);
+			mesh->SetNormals(&normals_vec[0], vertice_num);
+			mesh->SetUVs(&uv_vec[0], vertice_num);
+			mesh->SetIndices(reinterpret_cast<std::uint32_t const*>(&indices[0]), vertice_num);
+
+			mesh->SetMaterial(materials[0]);
+
+			scene->AttachShape(mesh);
 		}
 
 		
@@ -325,7 +348,7 @@ namespace Baikal
 		if (emission.sqnorm() > 0)
 		{
 			material_layers |= UberV2Material::Layers::kEmissionLayer;			
-			if (!diffuse_tex_ptr)
+			if (diffuse_tex_ptr)
 			{				
 				diffuse_tex_ptr->getFileName().toString(diff_tex_path);
 				auto texture = LoadTexture(image_io, scene, basepath, diff_tex_path);
@@ -337,7 +360,11 @@ namespace Baikal
 			}
 		}
 
-		ofbx::Color diffuse_color = mat.getDiffuseColor();
+		//ofbx::Color diffuse_color = mat.getDiffuseColor();
+		ofbx::Color diffuse_color;
+		diffuse_color.r = 1.0f;
+		diffuse_color.g = 1.0f;
+		diffuse_color.b = 1.0f;
 
 		//auto s = RadeonRays::float3(mat.specular[0], mat.specular[1], mat.specular[2]);
 		//auto r = RadeonRays::float3(mat.transmittance[0], mat.transmittance[1], mat.transmittance[2]);
@@ -377,7 +404,7 @@ namespace Baikal
 
 		// Check if we have bump map
 		const ofbx::Texture *normal_tex_ptr = mat.getTexture(ofbx::Texture::TextureType::NORMAL);
-		if (!normal_tex_ptr)
+		if (normal_tex_ptr)
 		{
 			material_layers |= UberV2Material::Layers::kShadingNormalLayer;
 
@@ -391,7 +418,7 @@ namespace Baikal
 		{
 			material_layers |= UberV2Material::Layers::kDiffuseLayer;
 
-			if (!diffuse_tex_ptr)
+			if (diffuse_tex_ptr)
 			{
 				auto texture = LoadTexture(image_io, scene, basepath, diff_tex_path);
 				uberv2_set_texture(material, "uberv2.diffuse.color", texture, apply_gamma);

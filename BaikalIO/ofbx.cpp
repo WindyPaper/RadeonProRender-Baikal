@@ -1124,6 +1124,9 @@ struct GeometryImpl : Geometry
 	std::vector<Vec3> tangents;
 	std::vector<int> materials;
 
+	std::vector<Vec3> origin_vertices;
+	std::vector<int> origin_indices;
+
 	const Skin* skin = nullptr;
 
 	std::vector<int> to_old_vertices;
@@ -2100,6 +2103,8 @@ static OptionalError<Object*> parseGeometry(const Scene& scene, const Element& e
 	if (!parseDoubleVecData(*vertices_element->first_property, &vertices)) return Error("Failed to parse vertices");
 	std::vector<int> original_indices;
 	if (!parseBinaryArray(*polys_element->first_property, &original_indices)) return Error("Failed to parse indices");
+	geom->origin_vertices = vertices;
+	geom->origin_indices = original_indices;
 
 	std::vector<int> to_old_indices;
 	geom->triangulate(original_indices, &geom->to_old_vertices, &to_old_indices);
