@@ -103,6 +103,11 @@ namespace Baikal
 			aiProcess_FlipUVs |
 			aiProcess_FlipWindingOrder;
 		const aiScene* import_fbx_scene = importer.ReadFile(filename, flags);
+		if (import_fbx_scene == NULL)
+		{
+			std::string error_code = importer.GetErrorString();
+			return NULL;
+		}
 		
 		unsigned int mesh_num = import_fbx_scene->mNumMeshes;
 		
@@ -180,8 +185,8 @@ namespace Baikal
 			mesh->SetNormals(&normals_vec[0], vertice_num);
 			mesh->SetUVs(&uv_vec[0], vertice_num);
 			mesh->SetIndices(reinterpret_cast<std::uint32_t const*>(&indices[0]), num_indices);
-
-			mesh->SetMaterial(materials[0]);
+			
+			mesh->SetMaterial(materials[mesh_ptr->mMaterialIndex]);
 
 			scene->AttachShape(mesh);
 		}
@@ -394,46 +399,66 @@ namespace Baikal
 		}
 
 		//ofbx::Color diffuse_color = mat.getDiffuseColor();
-		ofbx::Color diffuse_color;
+		/*ofbx::Color diffuse_color;
 		diffuse_color.r = 1.0f;
 		diffuse_color.g = 1.0f;
-		diffuse_color.b = 1.0f;
+		diffuse_color.b = 1.0f;*/
 
-		//auto s = RadeonRays::float3(mat.specular[0], mat.specular[1], mat.specular[2]);
-		//auto r = RadeonRays::float3(mat.transmittance[0], mat.transmittance[1], mat.transmittance[2]);
-		auto d = RadeonRays::float3(diffuse_color.r, diffuse_color.g, diffuse_color.b);
+		aiColor3D specular_color_value;
+		mat.Get(AI_MATKEY_COLOR_SPECULAR, specular_color_value);
+		auto s = RadeonRays::float3(specular_color_value.r, specular_color_value.g, specular_color_value.b);
 
-		//auto default_ior = Baikal::InputMap_ConstantFloat::Create(3.0f);
-		//auto default_roughness = Baikal::InputMap_ConstantFloat::Create(0.01f);
-		//auto default_one = Baikal::InputMap_ConstantFloat::Create(1.0f);
+		aiColor3D transmit_value;
+		mat.Get(AI_MATKEY_COLOR_TRANSPARENT, transmit_value);
+		auto r = RadeonRays::float3(transmit_value.r, transmit_value.g, transmit_value.b);
+		//auto d = RadeonRays::float3(diffuse_color.r, diffuse_color.g, diffuse_color.b);
 
-		//// Check refraction layer
-		//if (r.sqnorm() > 0)
-		//{
-		//	material_layers |= UberV2Material::Layers::kRefractionLayer;
-		//	material->SetInputValue("uberv2.refraction.ior", default_ior);
-		//	material->SetInputValue("uberv2.refraction.roughness", default_roughness);
-		//	material->SetInputValue("uberv2.refraction.color", InputMap_ConstantFloat3::Create(r));
-		//}
+		float specular_exp = 0.0f;
+		mat.Get(AI_MATKEY_SHININESS, specular_exp);
 
-		//// Check reflection layer
-		//if (s.sqnorm() > 0)
-		//{
-		//	material_layers |= UberV2Material::Layers::kReflectionLayer;
-		//	material->SetInputValue("uberv2.reflection.ior", default_ior);
-		//	material->SetInputValue("uberv2.reflection.roughness", default_roughness);
-		//	material->SetInputValue("uberv2.reflection.metalness", default_one);
+		float reflective_val = 1.0f;
+		//mat.Get(AI_MATKEY_REFLECTIVITY, reflective_val);
 
-		//	if (!mat.specular_texname.empty())
-		//	{
-		//		auto texture = LoadTexture(image_io, scene, basepath, mat.specular_texname);
-		//		uberv2_set_texture(material, "uberv2.reflection.color", texture, apply_gamma);
-		//	}
-		//	else
-		//	{
-		//		material->SetInputValue("uberv2.reflection.color", InputMap_ConstantFloat3::Create(s));
-		//	}
-		//}
+		aiColor3D reflective_color;
+		mat.Get(AI_MATKEY_COLOR_REFLECTIVE, reflective_color);
+
+		float refractive_val = 0.0f;
+		mat.Get(AI_MATKEY_REFRACTI, refractive_val);		
+
+		auto default_ior = Baikal::InputMap_ConstantFloat::Create(1.5f);
+		auto default_roughness = Baikal::InputMap_ConstantFloat::Create(0.01f);
+		auto default_one = Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(1.0, 0.0, 0.0));
+
+		// Check refraction layer
+		if (refractive_val > FLOAT_EPS)
+		{
+			material_layers |= UberV2Material::Layers::kRefractionLayer;
+			material->SetInputValue("uberv2.refraction.ior", default_ior);
+			material->SetInputValue("uberv2.refraction.roughness", default_roughness);
+			material->SetInputValue("uberv2.refraction.color", InputMap_ConstantFloat3::Create(r));
+		}
+
+		// Check specular layer
+		if (reflective_val > FLOAT_EPS)
+		{
+			material_layers |= UberV2Material::Layers::kReflectionLayer;
+			material->SetInputValue("uberv2.reflection.ior", default_ior);
+			auto roughness = Baikal::InputMap_ConstantFloat::Create(0.000001f);
+			material->SetInputValue("uberv2.reflection.roughness", roughness);
+			material->SetInputValue("uberv2.reflection.metalness", default_one);
+
+			aiString specular_tex;
+			if (mat.GetTexture(aiTextureType_SPECULAR, 0, &specular_tex) == aiReturn_SUCCESS)
+			{
+				auto texture = LoadTexture(image_io, scene, basepath, specular_tex.C_Str());
+				uberv2_set_texture(material, "uberv2.reflection.color", texture, apply_gamma);
+			}
+			else
+			{
+				//auto refle_c = RadeonRays::float3(reflective_color.r, reflective_color.g, reflective_color.b);
+				material->SetInputValue("uberv2.reflection.color", InputMap_ConstantFloat3::Create(1));
+			}
+		}
 
 		// Check if we have bump map
 		aiString ai_normal_str;
@@ -445,16 +470,19 @@ namespace Baikal
 		}
 
 		// Finally add diffuse layer
+		material_layers |= UberV2Material::Layers::kDiffuseLayer;
 		aiString ai_diffuse_str;
 		if (mat.GetTexture(aiTextureType_DIFFUSE, 0, &ai_diffuse_str) == aiReturn_SUCCESS)
-		{
-			material_layers |= UberV2Material::Layers::kDiffuseLayer;
+		{			
 			auto texture = LoadTexture(image_io, scene, basepath, ai_diffuse_str.C_Str());
 			uberv2_set_texture(material, "uberv2.diffuse.color", texture, apply_gamma);
 		}
 		else
 		{
-			material->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(d));
+			aiColor3D diffuse_color(0.f, 0.f, 1.f);
+			mat.Get(AI_MATKEY_COLOR_DIFFUSE,  diffuse_color);
+			auto diff_baikal = RadeonRays::float3(diffuse_color.r, diffuse_color.g, diffuse_color.b);
+			material->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(diff_baikal));
 		}
 
 		// Set material name
