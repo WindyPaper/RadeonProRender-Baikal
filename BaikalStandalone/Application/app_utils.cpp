@@ -152,16 +152,16 @@ namespace Baikal
 
     AppSettings::AppSettings()
         : path("../Resources/CornellBox")
-        , modelname("orig.objm")
-        , envmapname("../Resources/Textures/studio015.hdr")
+        , modelname("test_scene.fbx")
+        , envmapname("../Resources/Textures/sky.hdr")
         //render
-        , width(512)
-        , height(512)
+        , width(1280)
+        , height(720)
         , num_bounces(5)
         , num_samples(-1)
         , interop(true)
         , cspeed(10.25f)
-        , mode(ConfigManager::Mode::kUseSingleGpu)
+        , mode(ConfigManager::Mode::kUseGpus)
         //ao
         , ao_radius(1.f)
         , num_ao_rays(1)
