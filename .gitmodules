@@ -1,4 +1,4 @@
 [submodule "RadeonRays"]
 	path = RadeonRays
-	url = https://github.com/GPUOpen-LibrariesAndSDKs/RadeonRays_SDK.git
+	url = https://github.com/WindyPaper/RadeonRays_SDK.git
 	branch = master
