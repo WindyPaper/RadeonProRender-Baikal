@@ -322,11 +322,11 @@ namespace Baikal
 		//}
 
 		// TODO: temporary code to add directional light
-		auto light = DirectionalLight::Create();
+		/*auto light = DirectionalLight::Create();
 		light->SetDirection(RadeonRays::float3(.1f, -1.f, -.1f));
 		light->SetEmittedRadiance(RadeonRays::float3(1.f, 1.f, 1.f));
 
-		scene->AttachLight(light);
+		scene->AttachLight(light);*/
 
 		return scene;
 	}
@@ -427,7 +427,8 @@ namespace Baikal
 
 		auto default_ior = Baikal::InputMap_ConstantFloat::Create(1.5f);
 		auto default_roughness = Baikal::InputMap_ConstantFloat::Create(0.01f);
-		auto default_one = Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(1.0, 0.0, 0.0));
+		auto default_one = Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(1.0, 1.0, 1.0));
+		auto default_metalness = Baikal::InputMap_ConstantFloat::Create(1.00f);
 
 		// Check refraction layer
 		if (refractive_val > FLOAT_EPS)
@@ -445,7 +446,7 @@ namespace Baikal
 			material->SetInputValue("uberv2.reflection.ior", default_ior);
 			auto roughness = Baikal::InputMap_ConstantFloat::Create(0.000001f);
 			material->SetInputValue("uberv2.reflection.roughness", roughness);
-			material->SetInputValue("uberv2.reflection.metalness", default_one);
+			material->SetInputValue("uberv2.reflection.metalness", default_metalness);
 
 			aiString specular_tex;
 			if (mat.GetTexture(aiTextureType_SPECULAR, 0, &specular_tex) == aiReturn_SUCCESS)
