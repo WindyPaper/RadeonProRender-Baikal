@@ -155,10 +155,10 @@ namespace Baikal
     AppSettings::AppSettings()
         : path("../Resources/CornellBox")
         , modelname("orig.objm")
-        , envmapname("../Resources/Textures/sky.hdr")
+        , envmapname("../Resources/Textures/studio015.hdr")
         //render
-        , width(1280)
-        , height(720)
+        , width(512)
+        , height(512)
         , num_bounces(5)
         , num_samples(-1)
         , interop(true)
