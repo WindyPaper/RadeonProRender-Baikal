@@ -90,6 +90,8 @@ namespace Baikal
 
         s.image_file_format = m_cmd_parser.GetOption("-iff", s.image_file_format);
 
+        s.light_file = m_cmd_parser.GetOption("-lights", s.light_file);
+
         if (m_cmd_parser.OptionExists("-ct"))
         {
             auto camera_type = m_cmd_parser.GetOption("-ct");
@@ -152,7 +154,7 @@ namespace Baikal
 
     AppSettings::AppSettings()
         : path("../Resources/CornellBox")
-        , modelname("test_scene.fbx")
+        , modelname("orig.objm")
         , envmapname("../Resources/Textures/sky.hdr")
         //render
         , width(1280)
@@ -161,7 +163,7 @@ namespace Baikal
         , num_samples(-1)
         , interop(true)
         , cspeed(10.25f)
-        , mode(ConfigManager::Mode::kUseGpus)
+        , mode(ConfigManager::Mode::kUseSingleGpu)
         //ao
         , ao_radius(1.f)
         , num_ao_rays(1)
