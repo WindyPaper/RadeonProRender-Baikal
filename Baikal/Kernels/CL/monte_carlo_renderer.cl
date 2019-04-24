@@ -647,7 +647,32 @@ KERNEL void ApplyGammaAndCopyData(
         float4 val = clamp(native_powr(v / v.w, 1.f / gamma), 0.f, 1.f);
         write_imagef(img, make_int2(global_idx, global_idy), val);
     }
-} 
+}
+
+// Test for WhiteBlackBoard
+KERNEL void WriteWhiteBlackBoard(
+	int width,
+	int height,
+	int item_size,
+	write_only image2d_t img
+)
+{
+	int global_id = get_global_id(0);
+	int x = global_id % width;
+	int y = global_id / width;
+
+	if (x < width && y < height)
+	{
+		float4 val = (float4)(1, 1, 1, 1);
+		int x_s = x / item_size;
+		int y_s = y / item_size;
+		if ((x_s % 2) != (y_s % 2))
+		{
+			val = (float4)(0, 0, 0, 1);
+		}
+		write_imagef(img, make_int2(x, y), val);
+	}
+}
 
 KERNEL void AccumulateSingleSample(
     GLOBAL float4 const* restrict src_sample_data,

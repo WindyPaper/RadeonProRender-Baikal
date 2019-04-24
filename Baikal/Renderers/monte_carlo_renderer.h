@@ -74,6 +74,8 @@ namespace Baikal
         CLWKernel GetCopyKernel();
         // Add function
         CLWKernel GetAccumulateKernel();
+
+		CLWKernel GetWhiteBlackBoardKernel();
         // Run render benchmark
         void Benchmark(ClwScene const& scene, Estimator::RayTracingStats& stats);
 

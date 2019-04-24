@@ -374,6 +374,11 @@ namespace Baikal
         return GetKernel("AccumulateData");
     }
 
+	CLWKernel MonteCarloRenderer::GetWhiteBlackBoardKernel()
+	{
+		return GetKernel("WriteWhiteBlackBoard");
+	}
+
     void MonteCarloRenderer::SetRandomSeed(std::uint32_t seed)
     {
         m_estimator->SetRandomSeed(seed);
