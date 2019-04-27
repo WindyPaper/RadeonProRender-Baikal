@@ -45,6 +45,8 @@ THE SOFTWARE.
 #include "scene.h"
 #include "postprocess.h"
 
+const float EPS = 1e-6f;
+
 namespace Baikal
 {
 	// Obj scene loader
@@ -96,16 +98,15 @@ namespace Baikal
 		unsigned int flags = aiProcess_CalcTangentSpace |
 			aiProcess_Triangulate |
 			aiProcess_JoinIdenticalVertices |
-			aiProcess_MakeLeftHanded |
 			aiProcess_PreTransformVertices |
 			aiProcess_RemoveRedundantMaterials |
 			aiProcess_OptimizeMeshes |
-			aiProcess_FlipUVs |
 			aiProcess_FlipWindingOrder;
 		const aiScene* import_fbx_scene = importer.ReadFile(filename, flags);
 		if (import_fbx_scene == NULL)
 		{
 			std::string error_code = importer.GetErrorString();
+			std::cout << ("load fbx file failed! " + error_code) << std::endl;
 			return NULL;
 		}
 		
@@ -158,7 +159,11 @@ namespace Baikal
 			{
 				vertices_vec[i] = RadeonRays::float3(mesh_ptr->mVertices[i].x, mesh_ptr->mVertices[i].y, mesh_ptr->mVertices[i].z);
 				normals_vec[i] = RadeonRays::float3(mesh_ptr->mNormals[i].x, mesh_ptr->mNormals[i].y, mesh_ptr->mNormals[i].z);
-				uv_vec[i] = RadeonRays::float2(mesh_ptr->mTextureCoords[0][i].x, mesh_ptr->mTextureCoords[0][i].y);				
+
+				if (mesh_ptr->mTextureCoords[0] != NULL)
+				{
+					uv_vec[i] = RadeonRays::float2(mesh_ptr->mTextureCoords[0][i].x, mesh_ptr->mTextureCoords[0][i].y);
+				}
 			}
 
 			// Copy the index data
@@ -322,11 +327,11 @@ namespace Baikal
 		//}
 
 		// TODO: temporary code to add directional light
-		/*auto light = DirectionalLight::Create();
+		auto light = DirectionalLight::Create();
 		light->SetDirection(RadeonRays::float3(.1f, -1.f, -.1f));
 		light->SetEmittedRadiance(RadeonRays::float3(1.f, 1.f, 1.f));
 
-		scene->AttachLight(light);*/
+		scene->AttachLight(light);
 
 		return scene;
 	}
@@ -426,12 +431,12 @@ namespace Baikal
 		mat.Get(AI_MATKEY_REFRACTI, refractive_val);		
 
 		auto default_ior = Baikal::InputMap_ConstantFloat::Create(1.5f);
-		auto default_roughness = Baikal::InputMap_ConstantFloat::Create(0.01f);
+		auto default_roughness = Baikal::InputMap_ConstantFloat::Create(0.0000001f);
 		auto default_one = Baikal::InputMap_ConstantFloat3::Create(RadeonRays::float3(1.0, 1.0, 1.0));
 		auto default_metalness = Baikal::InputMap_ConstantFloat::Create(1.00f);
 
 		// Check refraction layer
-		if (refractive_val > FLOAT_EPS)
+		if (refractive_val > EPS)
 		{
 			material_layers |= UberV2Material::Layers::kRefractionLayer;
 			material->SetInputValue("uberv2.refraction.ior", default_ior);
@@ -440,12 +445,12 @@ namespace Baikal
 		}
 
 		// Check specular layer
-		if (reflective_val > FLOAT_EPS)
+		if (reflective_val > EPS)
 		{
 			material_layers |= UberV2Material::Layers::kReflectionLayer;
 			material->SetInputValue("uberv2.reflection.ior", default_ior);
-			auto roughness = Baikal::InputMap_ConstantFloat::Create(0.000001f);
-			material->SetInputValue("uberv2.reflection.roughness", roughness);
+			//auto roughness = Baikal::InputMap_ConstantFloat::Create(0.000001f);
+			material->SetInputValue("uberv2.reflection.roughness", default_roughness);
 			material->SetInputValue("uberv2.reflection.metalness", default_metalness);
 
 			aiString specular_tex;
@@ -457,13 +462,14 @@ namespace Baikal
 			else
 			{
 				//auto refle_c = RadeonRays::float3(reflective_color.r, reflective_color.g, reflective_color.b);
-				material->SetInputValue("uberv2.reflection.color", InputMap_ConstantFloat3::Create(1));
+				material->SetInputValue("uberv2.reflection.color", InputMap_ConstantFloat3::Create(RadeonRays::float3(1.0f, 1.0f, 1.0f)));
 			}
 		}
 
 		// Check if we have bump map
 		aiString ai_normal_str;
-		if (mat.GetTexture(aiTextureType_NORMALS, 0, &ai_normal_str) == aiReturn_SUCCESS)
+		if (mat.GetTexture(aiTextureType_NORMALS, 0, &ai_normal_str) == aiReturn_SUCCESS ||
+			mat.GetTexture(aiTextureType_HEIGHT, 0, &ai_normal_str) == aiReturn_SUCCESS)
 		{
 			material_layers |= UberV2Material::Layers::kShadingNormalLayer;			
 			auto texture = LoadTexture(image_io, scene, basepath, ai_normal_str.C_Str());
@@ -480,10 +486,10 @@ namespace Baikal
 		}
 		else
 		{
-			aiColor3D diffuse_color(0.f, 0.f, 1.f);
+			aiColor3D diffuse_color(0.f, 0.f, 0.f);
 			mat.Get(AI_MATKEY_COLOR_DIFFUSE,  diffuse_color);
 			auto diff_baikal = RadeonRays::float3(diffuse_color.r, diffuse_color.g, diffuse_color.b);
-			material->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(diff_baikal));
+			material->SetInputValue("uberv2.diffuse.color", InputMap_ConstantFloat3::Create(RadeonRays::float3(1.0f, 1.0f, 1.0f)));
 		}
 
 		// Set material name
