@@ -36,6 +36,8 @@ namespace Baikal
     {
         auto ext = filename.substr(filename.rfind(".") + 1);
 
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
         SceneIo *instance = GetInstance();
         auto loader_it = instance->m_loaders.find(ext);
         if (loader_it == instance->m_loaders.end())

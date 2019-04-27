@@ -142,6 +142,16 @@ Scene1::Ptr LoadScene(Baikal::AppSettings const& settings)
         throw std::runtime_error("LoadScene(...): cannot create scene");
     }
 
+	if (settings.envmapname != "")
+	{
+		auto image_io(ImageIo::CreateImageIo());
+		auto ibl_texture = image_io->LoadImage(settings.envmapname);
+
+		auto ibl = ImageBasedLight::Create();
+		ibl->SetTexture(ibl_texture);
+		scene->AttachLight(ibl);
+	}	
+
     LoadMaterials(basepath, scene);
     LoadLights(settings.light_file, scene);
     return scene;
