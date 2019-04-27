@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include "SceneGraph/camera.h"
 
 #include "math/matrix.h"
-#include "RadeonProRender.h"
+//#include "RadeonProRender.h"
 
 namespace Baikal {
     class PerspectiveCamera;
