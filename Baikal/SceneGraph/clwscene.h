@@ -26,6 +26,8 @@ namespace Baikal
 
         CLWBuffer<RadeonRays::float3> vertices;
         CLWBuffer<RadeonRays::float3> normals;
+		CLWBuffer<RadeonRays::float3> tangents;
+		CLWBuffer<RadeonRays::float3> binormals;
         CLWBuffer<RadeonRays::float2> uvs;
         CLWBuffer<int> indices;
 

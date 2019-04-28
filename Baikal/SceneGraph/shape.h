@@ -151,6 +151,14 @@ namespace Baikal
         void SetNormals(float const* normals, std::size_t num_normals);
         void SetNormals(std::vector<RadeonRays::float3>&& normals);
 
+		void SetTangents(RadeonRays::float3 const* tangents, std::size_t num_tangents);
+		std::size_t GetNumTangents() const;
+		RadeonRays::float3 const* GetTangents() const;
+
+		void SetBinormals(RadeonRays::float3 const* binormals, std::size_t num_binormal);
+		std::size_t GetNumBinormals() const;
+		RadeonRays::float3 const* GetBinormals() const;
+
         std::size_t GetNumNormals() const;
         RadeonRays::float3 const* GetNormals() const;
         
@@ -160,6 +168,8 @@ namespace Baikal
         void SetUVs(std::vector<RadeonRays::float2>&& uvs);
         std::size_t GetNumUVs() const;
         RadeonRays::float2 const* GetUVs() const;
+
+		void SetLightmapUVs(RadeonRays::float2 const* uvs, std::size_t num_uvs);
 
         // Local space AABB
         RadeonRays::bbox GetLocalAABB() const override;
@@ -178,7 +188,10 @@ namespace Baikal
     private:
         std::vector<RadeonRays::float3> m_vertices;
         std::vector<RadeonRays::float3> m_normals;
+		std::vector<RadeonRays::float3> m_tangents;
+		std::vector<RadeonRays::float3> m_binormals;
         std::vector<RadeonRays::float2> m_uvs;
+		std::vector<RadeonRays::float2> m_lightmap_uvs;
         std::vector<std::uint32_t> m_indices;
 
         mutable RadeonRays::bbox m_aabb;

@@ -129,30 +129,20 @@ namespace Baikal
 			}
 		}
 
-		//auto res = LoadObj(&attrib, &objshapes, &objmaterials, &err, filename.c_str(), basepath.c_str(), true);
-		//if (!res)
-		//{
-		//	throw std::runtime_error(err);
-		//}
-		//LogInfo("Success\n");
-
-		//// Allocate scene
-		//auto scene = Scene1::Create();
-
-		// Enumerate and translate materials
-		// Keep track of emissive subset
-
 		for (unsigned int mesh_i = 0; mesh_i < mesh_num; ++mesh_i)
 		{
-			aiMesh *mesh_ptr = import_fbx_scene->mMeshes[mesh_i];
-			
-						
-			//const ofbx::Geometry *geo_ptr = mesh_ptr->getGeometry();
+			aiMesh *mesh_ptr = import_fbx_scene->mMeshes[mesh_i];										
 
 			int vertice_num = mesh_ptr->mNumVertices;
 			std::vector<RadeonRays::float3> vertices_vec(vertice_num);
 			std::vector<RadeonRays::float3> normals_vec(vertice_num);
+			std::vector<RadeonRays::float3> tangents_vec;// (vertice_num);
+			tangents_vec.reserve(vertice_num);
+			std::vector<RadeonRays::float3> binormal_vec;// (vertice_num);
+			binormal_vec.reserve(vertice_num);
 			std::vector<RadeonRays::float2> uv_vec(vertice_num);
+			std::vector<RadeonRays::float2> lightmap_uv_vec;// (vertice_num);
+			lightmap_uv_vec.reserve(vertice_num);
 			std::vector<unsigned int> indices;
 
 			for (int i = 0; i < vertice_num; ++i)
@@ -160,9 +150,21 @@ namespace Baikal
 				vertices_vec[i] = RadeonRays::float3(mesh_ptr->mVertices[i].x, mesh_ptr->mVertices[i].y, mesh_ptr->mVertices[i].z);
 				normals_vec[i] = RadeonRays::float3(mesh_ptr->mNormals[i].x, mesh_ptr->mNormals[i].y, mesh_ptr->mNormals[i].z);
 
+				if (mesh_ptr->HasTangentsAndBitangents())
+				{
+					tangents_vec.push_back(RadeonRays::float3(mesh_ptr->mTangents[i].x, mesh_ptr->mTangents[i].y, mesh_ptr->mTangents[i].z));
+					binormal_vec.push_back(RadeonRays::float3(mesh_ptr->mBitangents[i].x, mesh_ptr->mBitangents[i].y, mesh_ptr->mBitangents[i].z));
+				}
+
 				if (mesh_ptr->mTextureCoords[0] != NULL)
 				{
 					uv_vec[i] = RadeonRays::float2(mesh_ptr->mTextureCoords[0][i].x, mesh_ptr->mTextureCoords[0][i].y);
+				}
+
+				//light map uv
+				if (mesh_ptr->mTextureCoords[1] != NULL)
+				{
+					lightmap_uv_vec.push_back(RadeonRays::float2(mesh_ptr->mTextureCoords[1][i].x, mesh_ptr->mTextureCoords[1][i].y));
 				}
 			}
 
@@ -188,7 +190,23 @@ namespace Baikal
 			auto mesh = Mesh::Create();
 			mesh->SetVertices(&vertices_vec[0], vertice_num);
 			mesh->SetNormals(&normals_vec[0], vertice_num);
+
+			if (tangents_vec.size() == vertice_num)
+			{
+				mesh->SetTangents(&tangents_vec[0], vertice_num);
+			}
+			if (binormal_vec.size() == vertice_num)
+			{
+				mesh->SetBinormals(&binormal_vec[0], vertice_num);
+			}
+
 			mesh->SetUVs(&uv_vec[0], vertice_num);
+
+			if (lightmap_uv_vec.size() == vertice_num)
+			{
+				mesh->SetLightmapUVs(&lightmap_uv_vec[0], vertice_num);
+			}
+
 			mesh->SetIndices(reinterpret_cast<std::uint32_t const*>(&indices[0]), num_indices);
 			
 			mesh->SetMaterial(materials[mesh_ptr->mMaterialIndex]);

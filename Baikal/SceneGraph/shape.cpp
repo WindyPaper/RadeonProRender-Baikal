@@ -122,7 +122,53 @@ namespace Baikal
     }
 
     
-    std::size_t Mesh::GetNumNormals() const
+	void Mesh::SetTangents(RadeonRays::float3 const* tangents, std::size_t num_tangents)
+	{
+		assert(tangents);
+		assert(num_tangents != 0);
+
+		// Resize internal array and copy data
+		m_tangents.resize(num_tangents);
+
+		std::copy(tangents, tangents + num_tangents, &m_tangents[0]);
+
+		SetDirty(true);
+	}
+
+	std::size_t Mesh::GetNumTangents() const
+	{
+		return m_tangents.size();
+	}
+
+	RadeonRays::float3 const* Mesh::GetTangents() const
+	{
+		return &m_tangents[0];
+	}
+
+	void Mesh::SetBinormals(RadeonRays::float3 const* binormals, std::size_t num_binormal)
+	{
+		assert(binormals);
+		assert(num_binormal != 0);
+
+		// Resize internal array and copy data
+		m_binormals.resize(num_binormal);
+
+		std::copy(binormals, binormals + num_binormal, &m_binormals[0]);
+
+		SetDirty(true);
+	}
+
+	std::size_t Mesh::GetNumBinormals() const
+	{
+		return m_binormals.size();
+	}
+
+	RadeonRays::float3 const* Mesh::GetBinormals() const
+	{
+		return &m_binormals[0];
+	}
+
+	std::size_t Mesh::GetNumNormals() const
     {
         return m_normals.size();
     }
@@ -177,7 +223,20 @@ namespace Baikal
         return &m_uvs[0];
     }
 
-    RadeonRays::bbox Shape::GetWorldAABB() const
+	void Mesh::SetLightmapUVs(RadeonRays::float2 const* uvs, std::size_t num_uvs)
+	{
+		assert(uvs);
+		assert(num_uvs != 0);
+
+		// Resize internal array and copy data
+		m_lightmap_uvs.resize(num_uvs);
+
+		std::copy(uvs, uvs + num_uvs, &m_lightmap_uvs[0]);
+
+		SetDirty(true);
+	}
+
+	RadeonRays::bbox Shape::GetWorldAABB() const
     {
         RadeonRays::bbox result;
         auto local_aabb = GetLocalAABB();
